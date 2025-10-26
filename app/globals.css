@@ -1,0 +1,293 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos globales */
+body {
+  font-family: 'Poppins', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Fondo y texto base (modo claro / oscuro) */
+html {
+  background-color: #f9fafb; /* bg-gray-50 */
+  color: #111827; /* text-gray-900 */
+}
+
+html.dark {
+  background-color: #111827; /* bg-gray-900 */
+  color: #f3f4f6; /* text-gray-100 */
+}
+
+/* Scrollbar moderna y adaptable al tema */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #f3f4f6; /* gris claro */
+}
+
+html.dark ::-webkit-scrollbar-track {
+  background-color: #1f2937; /* gris oscuro */
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #9ca3af; /* gris medio */
+  border-radius: 9999px;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background-color: #4b5563; /* gris oscuro */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #6b7280;
+}
+
+/* Animación de entrada */
+main {
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* === Tipografía global y espaciado === */
+
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+p {
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+main {
+  max-width: 100%;
+}
+
+section {
+  margin-bottom: 2rem;
+}
+
+a {
+  text-decoration: none;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+/* --- 🔧 Fix para centrar el toast de shadcn/ui --- */
+[data-radix-toast-viewport] {
+  position: fixed !important;
+  top: 1.5rem !important;          /* separación superior (24px) */
+  left: 50% !important;            /* centra horizontalmente */
+  transform: translateX(-50%) !important; /* compensa mitad de su ancho */
+  display: flex !important;
+  justify-content: center !important;
+  width: 100%;
+  max-width: 420px;
+  z-index: 9999;
+  pointer-events: none !important; /* evita bloquear clics debajo */
+}
+
+[data-radix-toast] {
+  pointer-events: auto !important; /* el toast sí debe ser clicable */
+}
+/* --- FIX DEFINITIVO DE POSICIONAMIENTO --- */
+html, body {
+  position: static !important;
+  transform: none !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  overflow-x: visible !important;
+}
+
+/* Cualquier contenedor principal que use flex o grid no debe alterar el fixed del toast */
+#root,
+#__next {
+  position: static !important;
+  transform: none !important;
+}
+
+/* Fuerza el viewport de Radix Toast al centro del viewport real */
+[data-radix-toast-viewport] {
+  position: fixed !important;
+  top: 2rem !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  max-width: 420px !important;
+  width: auto !important;
+  margin: 0 auto !important;
+  z-index: 99999 !important;
+  pointer-events: none !important;
+}
+
+[data-radix-toast] {
+  pointer-events: auto !important;
+}
+#devtools-indicator,
+.nextjs-toast {
+  display: none !important;
+}
+/* Oculta los toasts internos de Next.js en modo desarrollo */
+#devtools-indicator,
+.nextjs-toast {
+  display: none !important;
+}
+/* --- FIXES GLOBALES --- */
+
+/* Quita cualquier interferencia del layout */
+html, body {
+  position: static !important;
+  transform: none !important;
+  display: block !important;
+  width: 100% !important;
+  overflow-x: visible !important;
+}
+
+/* Centrado del toast de shadcn/ui */
+[data-radix-toast-viewport] {
+  position: fixed !important;
+  top: 1.5rem !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: auto !important;
+  max-width: 420px !important;
+  z-index: 9999 !important;
+  pointer-events: none !important;
+}
+
+[data-radix-toast] {
+  pointer-events: auto !important;
+}
+
+/* 🔇 Oculta los toasts de Next.js Dev Mode */
+#devtools-indicator,
+.nextjs-toast {
+  display: none !important;
+}
