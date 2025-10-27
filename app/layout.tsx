@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/navigation-menu"
 import { Poppins } from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
+import { createClient } from "@/utils/supabase/server"
+import { LogoutButton } from "@/components/LogoutButton"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -21,11 +23,29 @@ export const metadata = {
   description: "Encuentra tu clínica de fisioterapia ideal",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  // 🧩 Detectar usuario y rol actual desde Supabase (en el servidor)
+  const supabase = createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  let role: "paciente" | "clinica" | null = null
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single()
+
+    role = profile?.role || "paciente"
+  }
+
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={poppins.className}>
@@ -42,6 +62,7 @@ export default function RootLayout({
 
               <NavigationMenu>
                 <NavigationMenuList className="flex items-center gap-8 text-lg font-medium">
+                  {/* Enlaces visibles para todos */}
                   <NavigationMenuItem>
                     <NavigationMenuLink asChild>
                       <Link
@@ -53,26 +74,34 @@ export default function RootLayout({
                     </NavigationMenuLink>
                   </NavigationMenuItem>
 
-                  <NavigationMenuItem>
-                    <NavigationMenuLink asChild>
-                      <Link
-                        href="/dashboard"
-                        className="hover:text-primary transition-colors"
-                      >
-                        Dashboard
-                      </Link>
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
+                  {/* Enlace condicional según el rol */}
+                  {role === "clinica" && (
+                    <NavigationMenuItem>
+                      <NavigationMenuLink asChild>
+                        <Link
+                          href="/clinic-panel"
+                          className="hover:text-primary transition-colors"
+                        >
+                          Panel
+                        </Link>
+                      </NavigationMenuLink>
+                    </NavigationMenuItem>
+                  )}
 
+                  {/* Login o logout según estado */}
                   <NavigationMenuItem>
-                    <NavigationMenuLink asChild>
-                      <Link
-                        href="/login"
-                        className="hover:text-primary transition-colors"
-                      >
-                        Login
-                      </Link>
-                    </NavigationMenuLink>
+                    {user ? (
+                      <LogoutButton />
+                    ) : (
+                      <NavigationMenuLink asChild>
+                        <Link
+                          href="/login"
+                          className="hover:text-primary transition-colors"
+                        >
+                          Login
+                        </Link>
+                      </NavigationMenuLink>
+                    )}
                   </NavigationMenuItem>
                 </NavigationMenuList>
               </NavigationMenu>
@@ -89,7 +118,7 @@ export default function RootLayout({
             © {new Date().getFullYear()} NoPain — Todos los derechos reservados.
           </footer>
 
-          {/* TOASTER de shadcn/ui */}
+          {/* TOASTER */}
           <Toaster />
         </ThemeProvider>
       </body>

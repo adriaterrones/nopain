@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
-import { createClient } from "../../../utils/supabase/client"
+import { createClient } from "@/utils/supabase/client"
 import {
   Dialog,
   DialogContent,
@@ -10,45 +10,99 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
+import { DayPicker } from "react-day-picker"
+import "react-day-picker/dist/style.css"
 
 export default function ClinicDetailPage() {
   const supabase = createClient()
   const { id } = useParams()
   const { toast } = useToast()
 
-  const [nombre, setNombre] = useState("")
-  const [fecha, setFecha] = useState("")
-  const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
+  const [reservas, setReservas] = useState<any[]>([])
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>()
+  const [selectedTime, setSelectedTime] = useState<string>("")
+  const [bookedTimes, setBookedTimes] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // Horarios disponibles por defecto
+  const timeSlots = [
+    "09:00", "09:30", "10:00", "10:30",
+    "11:00", "11:30", "12:00", "12:30",
+    "16:00", "16:30", "17:00", "17:30",
+  ]
+
+  // Cargar todas las reservas de la clínica
+  const fetchReservas = async () => {
+    const { data, error } = await supabase
+      .from("reservas")
+      .select("*")
+      .eq("clinic_id", id)
+      .order("date", { ascending: true })
+
+    if (error) console.error("Error cargando reservas:", error.message)
+    else setReservas(data)
+  }
+
+  // Cargar reservas del día seleccionado
+  const fetchBookedTimes = async () => {
+    if (!selectedDate) return
+    const dateStr = selectedDate.toISOString().split("T")[0]
+    const { data, error } = await supabase
+      .from("reservas")
+      .select("time")
+      .eq("clinic_id", id)
+      .eq("date", dateStr)
+
+    if (error) console.error(error)
+    else {
+      const booked = data.map((r: any) => r.time)
+      setBookedTimes(booked)
+    }
+  }
+
+  useEffect(() => {
+    if (id) fetchReservas()
+  }, [id])
+
+  useEffect(() => {
+    if (selectedDate) fetchBookedTimes()
+  }, [selectedDate])
+
+  // 🧩 Crear sesión de pago en Stripe
+  const handleReserve = async () => {
+    if (!selectedDate || !selectedTime) return
     setLoading(true)
 
-    const { error } = await supabase
-      .from("reservas")
-      .insert([{ nombre, fecha, clinic_id: id }])
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clinicId: id,
+          userName: "Paciente",
+          date: selectedDate.toISOString().split("T")[0],
+          time: selectedTime,
+        }),
+      })
 
-    setLoading(false)
-
-    if (error) {
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url // Redirigir al checkout de Stripe
+      } else {
+        throw new Error(data.error || "No se pudo iniciar el pago.")
+      }
+    } catch (err: any) {
       toast({
-        title: "❌ Error al crear la reserva",
-        description: error.message,
+        title: "❌ Error al iniciar pago",
+        description: err.message,
         variant: "destructive",
       })
-    } else {
-      toast({
-        title: "✅ Reserva creada correctamente",
-        description: `${nombre} - ${fecha}`,
-      })
-      setNombre("")
-      setFecha("")
-      setOpen(false)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -58,7 +112,7 @@ export default function ClinicDetailPage() {
       <section className="text-center mb-10">
         <h1 className="text-4xl font-bold mb-2">Clínica {id}</h1>
         <p className="text-gray-500 dark:text-gray-400">
-          Bienvenido a la ficha de la clínica. Aquí podrás reservar tu próxima sesión de fisioterapia.
+          Bienvenido a la ficha de la clínica. Aquí podrás reservar y pagar tu próxima sesión de fisioterapia.
         </p>
       </section>
 
@@ -75,57 +129,94 @@ export default function ClinicDetailPage() {
           </Button>
         </DialogTrigger>
 
-        {/* Modal en pantalla completa con fondo oscuro */}
-        <DialogContent
-          className="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50"
-          hideClose
-        >
-          <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-2xl w-full max-w-md mx-auto border border-gray-200 dark:border-gray-700">
-            <DialogHeader>
-              <DialogTitle className="text-center text-2xl font-semibold mb-4">
-                Reservar sesión
-              </DialogTitle>
-            </DialogHeader>
+        {/* Modal de reserva */}
+        <DialogContent className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 max-w-lg mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl font-semibold mb-4">
+              Selecciona fecha y hora
+            </DialogTitle>
+          </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-6">
+            {/* Selector de día */}
+            <div>
+              <Label>Selecciona un día</Label>
+              <DayPicker
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                fromDate={new Date()}
+                className="mt-2 border rounded-lg p-2"
+              />
+            </div>
+
+            {/* Selector de hora */}
+            {selectedDate && (
               <div>
-                <Label htmlFor="nombre">Nombre</Label>
-                <Input
-                  id="nombre"
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  required
-                  placeholder="Tu nombre completo"
-                />
+                <Label>Selecciona hora</Label>
+                <div className="grid grid-cols-3 gap-2 mt-3">
+                  {timeSlots.map((t) => (
+                    <Button
+                      key={t}
+                      variant={t === selectedTime ? "default" : "outline"}
+                      onClick={() => setSelectedTime(t)}
+                      disabled={bookedTimes.includes(t)}
+                    >
+                      {t}
+                    </Button>
+                  ))}
+                </div>
               </div>
+            )}
 
-              <div>
-                <Label htmlFor="fecha">Fecha</Label>
-                <Input
-                  id="fecha"
-                  type="date"
-                  value={fecha}
-                  onChange={(e) => setFecha(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col gap-3 mt-6">
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Reservando..." : "Confirmar reserva"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setOpen(false)}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </form>
+            {/* Botón de reserva */}
+            <Button
+              className="w-full mt-4"
+              disabled={!selectedDate || !selectedTime || loading}
+              onClick={handleReserve}
+            >
+              {loading ? "Iniciando pago..." : "Confirmar y pagar"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Listado de reservas existentes */}
+      <section className="mt-16">
+        <h2 className="text-2xl font-semibold mb-4 text-center">
+          Reservas confirmadas
+        </h2>
+
+        {reservas.length === 0 ? (
+          <p className="text-gray-500 text-center">Todavía no hay reservas.</p>
+        ) : (
+          <div className="overflow-hidden border rounded-xl dark:border-gray-800">
+            <table className="w-full text-left">
+              <thead className="bg-gray-100 dark:bg-gray-800">
+                <tr>
+                  <th className="p-3">Nombre</th>
+                  <th className="p-3">Fecha</th>
+                  <th className="p-3">Hora</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reservas.map((r) => (
+                  <tr
+                    key={r.id}
+                    className="border-t border-gray-200 dark:border-gray-700"
+                  >
+                    <td className="p-3">{r.user_name}</td>
+                    <td className="p-3">
+                      {new Date(r.date).toLocaleDateString("es-ES")}
+                    </td>
+                    <td className="p-3">{r.time}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   )
 }
