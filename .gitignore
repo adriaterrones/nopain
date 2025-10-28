@@ -1,1 +1,20 @@
-node_modules
+# dependencias
+node_modules/
+.next/
+dist/
+out/
+build/
+
+# configuración local
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# sistema
+.DS_Store
+.vscode/
+.idea/
+*.log
+
