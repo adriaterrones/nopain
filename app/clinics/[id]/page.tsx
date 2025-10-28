@@ -16,19 +16,30 @@ import { useToast } from "@/components/ui/use-toast"
 import { DayPicker } from "react-day-picker"
 import "react-day-picker/dist/style.css"
 
+type Reserva = {
+  id: string
+  created_at: string
+  user_name: string
+  date: string            // YYYY-MM-DD
+  clinic_id: string
+  user_email: string | null
+  user_id: string | null
+  time: string            // "HH:MM"
+}
+
 export default function ClinicDetailPage() {
   const supabase = createClient()
-  const { id } = useParams()
+  const { id } = useParams() as { id: string }
   const { toast } = useToast()
 
   const [open, setOpen] = useState(false)
-  const [reservas, setReservas] = useState<any[]>([])
+  const [reservas, setReservas] = useState<Reserva[]>([])
   const [selectedDate, setSelectedDate] = useState<Date | undefined>()
   const [selectedTime, setSelectedTime] = useState<string>("")
   const [bookedTimes, setBookedTimes] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
 
-  // Horarios disponibles por defecto
+  // Horarios disponibles
   const timeSlots = [
     "09:00", "09:30", "10:00", "10:30",
     "11:00", "11:30", "12:00", "12:30",
@@ -42,12 +53,17 @@ export default function ClinicDetailPage() {
       .select("*")
       .eq("clinic_id", id)
       .order("date", { ascending: true })
+      .order("time", { ascending: true })
 
-    if (error) console.error("Error cargando reservas:", error.message)
-    else setReservas(data)
+    if (error) {
+      console.error("Error cargando reservas:", error.message)
+      setReservas([])
+      return
+    }
+    setReservas((data ?? []) as Reserva[])
   }
 
-  // Cargar reservas del día seleccionado
+  // Cargar horas ocupadas del día seleccionado
   const fetchBookedTimes = async () => {
     if (!selectedDate) return
     const dateStr = selectedDate.toISOString().split("T")[0]
@@ -57,11 +73,13 @@ export default function ClinicDetailPage() {
       .eq("clinic_id", id)
       .eq("date", dateStr)
 
-    if (error) console.error(error)
-    else {
-      const booked = data.map((r: any) => r.time)
-      setBookedTimes(booked)
+    if (error) {
+      console.error("Error cargando horas ocupadas:", error.message)
+      setBookedTimes([])
+      return
     }
+    const booked = (data ?? []).map((r: { time: string }) => r.time)
+    setBookedTimes(booked)
   }
 
   useEffect(() => {
@@ -72,38 +90,56 @@ export default function ClinicDetailPage() {
     if (selectedDate) fetchBookedTimes()
   }, [selectedDate])
 
-  // 🧩 Crear sesión de pago en Stripe
+  // Guardar reserva en Supabase (sin auth por ahora)
   const handleReserve = async () => {
-    if (!selectedDate || !selectedTime) return
-    setLoading(true)
-
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clinicId: id,
-          userName: "Paciente",
-          date: selectedDate.toISOString().split("T")[0],
-          time: selectedTime,
-        }),
-      })
-
-      const data = await res.json()
-      if (data.url) {
-        window.location.href = data.url // Redirigir al checkout de Stripe
-      } else {
-        throw new Error(data.error || "No se pudo iniciar el pago.")
-      }
-    } catch (err: any) {
+    if (!selectedDate || !selectedTime) {
       toast({
-        title: "❌ Error al iniciar pago",
-        description: err.message,
+        title: "⚠️ Selecciona fecha y hora",
+        description: "Por favor, elige un día y una hora disponibles.",
         variant: "destructive",
       })
-    } finally {
-      setLoading(false)
+      return
     }
+
+    setLoading(true)
+    const dateStr = selectedDate.toISOString().split("T")[0]
+    const clinicIdNumber = Number(id)
+
+    // 🧩 Bloque de depuración con logs detallados
+    const { data, error } = await supabase.from("reservas").insert([
+      {
+        clinic_id: isNaN(clinicIdNumber) ? id : clinicIdNumber,
+        user_name: "Paciente de prueba",
+        date: dateStr,
+        time: selectedTime,
+        user_email: null,
+        user_id: null,
+      },
+    ])
+
+    console.log("📦 Data insert:", data)
+    console.log("❗ Error detail:", error)
+
+    if (error) {
+      console.error("Error al guardar reserva:", error)
+      toast({
+        title: "❌ Error al guardar",
+        description: error.message || "No se pudo guardar la reserva. Inténtalo de nuevo.",
+        variant: "destructive",
+      })
+    } else {
+      toast({
+        title: "✅ Reserva confirmada",
+        description: `Reserva creada para el ${dateStr} a las ${selectedTime}.`,
+      })
+      setOpen(false)
+      setSelectedDate(undefined)
+      setSelectedTime("")
+      await fetchReservas()
+      await fetchBookedTimes()
+    }
+
+    setLoading(false)
   }
 
   return (
@@ -112,7 +148,7 @@ export default function ClinicDetailPage() {
       <section className="text-center mb-10">
         <h1 className="text-4xl font-bold mb-2">Clínica {id}</h1>
         <p className="text-gray-500 dark:text-gray-400">
-          Bienvenido a la ficha de la clínica. Aquí podrás reservar y pagar tu próxima sesión de fisioterapia.
+          Bienvenido a la ficha de la clínica. Aquí podrás reservar tu próxima sesión de fisioterapia.
         </p>
       </section>
 
@@ -175,7 +211,7 @@ export default function ClinicDetailPage() {
               disabled={!selectedDate || !selectedTime || loading}
               onClick={handleReserve}
             >
-              {loading ? "Iniciando pago..." : "Confirmar y pagar"}
+              {loading ? "Guardando..." : "Confirmar reserva"}
             </Button>
           </div>
         </DialogContent>
