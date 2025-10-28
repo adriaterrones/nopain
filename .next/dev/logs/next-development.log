@@ -1,8 +1,10 @@
-[00:00:03.343] Server  WARN     ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
-[00:00:03.690] Server  LOG      ✓ Ready in 3s
-[00:01:29.079] Server  LOG      ○ Compiling /login ...
-[00:01:32.979] Server  WARN    Error: Route "/login" used `cookies().get`. `cookies()` returns a Promise and must be unwrapped with `await` or `React.use()` before accessing its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
-[00:01:33.979] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[02:17:49.069] Server  LOG        Reload env: .env.local
-[02:21:08.908] Server  LOG        Reload env: .env.local
-[02:21:09.983] Server  LOG      ✓ Compiled in 921ms
+[00:00:04.551] Server  WARN     ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+[00:00:05.073] Server  LOG      ✓ Ready in 4.2s
+[00:00:09.840] Server  LOG      ○ Compiling /clinics/[id] ...
+[00:00:21.001] Server  WARN    Error: Route "/clinics/[id]" used `cookies().get`. `cookies()` returns a Promise and must be unwrapped with `await` or `React.use()` before accessing its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+[00:00:22.868] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:29.983] Server  LOG      ○ Compiling /clinics ...
+[00:00:30.975] Server  WARN    Error: Route "/clinics" used `cookies().get`. `cookies()` returns a Promise and must be unwrapped with `await` or `React.use()` before accessing its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+[00:00:31.981] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:45.607] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+[00:00:45.607] Browser WARN    Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.

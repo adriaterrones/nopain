@@ -6,6 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 
+interface Physiotherapist {
+  id: string
+  name: string
+}
+
 interface Reserva {
   id: string
   user_name: string
@@ -13,6 +18,7 @@ interface Reserva {
   created_at: string
   clinic_id: string
   status?: string
+  physiotherapists?: Physiotherapist | null
 }
 
 export default function ClinicPanelPage() {
@@ -22,12 +28,23 @@ export default function ClinicPanelPage() {
   const [reservas, setReservas] = useState<Reserva[]>([])
   const [loading, setLoading] = useState(true)
 
-  // ✅ Cargar reservas desde Supabase
+  // ✅ Cargar reservas con el nombre del fisioterapeuta
   const fetchReservas = async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from("reservas")
-      .select("id, user_name, date, created_at, clinic_id, status")
+      .select(`
+        id,
+        user_name,
+        date,
+        created_at,
+        clinic_id,
+        status,
+        physiotherapists (
+          id,
+          name
+        )
+      `)
       .order("date", { ascending: true })
 
     if (error) {
@@ -123,6 +140,10 @@ export default function ClinicPanelPage() {
                 <p>
                   <strong>Creada el:</strong>{" "}
                   {new Date(reserva.created_at).toLocaleDateString("es-ES")}
+                </p>
+                <p>
+                  <strong>Fisioterapeuta:</strong>{" "}
+                  {reserva.physiotherapists?.name || "No asignado"}
                 </p>
                 <p>
                   <strong>Estado:</strong>{" "}
