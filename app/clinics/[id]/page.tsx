@@ -11,10 +11,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
-import { DayPicker } from "react-day-picker"
-import "react-day-picker/dist/style.css"
+import ReservationForm from "@/components/ReservationForm"
 
 export default function ClinicDetailPage() {
   const supabase = createClient()
@@ -23,87 +21,38 @@ export default function ClinicDetailPage() {
 
   const [open, setOpen] = useState(false)
   const [reservas, setReservas] = useState<any[]>([])
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>()
-  const [selectedTime, setSelectedTime] = useState<string>("")
-  const [bookedTimes, setBookedTimes] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  // Horarios disponibles por defecto
-  const timeSlots = [
-    "09:00", "09:30", "10:00", "10:30",
-    "11:00", "11:30", "12:00", "12:30",
-    "16:00", "16:30", "17:00", "17:30",
-  ]
-
-  // Cargar todas las reservas de la clínica
+  // ✅ Cargar todas las reservas de la clínica
   const fetchReservas = async () => {
+    setLoading(true)
     const { data, error } = await supabase
       .from("reservas")
-      .select("*")
+      .select("id, user_name, date, time, status")
       .eq("clinic_id", id)
       .order("date", { ascending: true })
 
-    if (error) console.error("Error cargando reservas:", error.message)
-    else setReservas(data)
-  }
-
-  // Cargar reservas del día seleccionado
-  const fetchBookedTimes = async () => {
-    if (!selectedDate) return
-    const dateStr = selectedDate.toISOString().split("T")[0]
-    const { data, error } = await supabase
-      .from("reservas")
-      .select("time")
-      .eq("clinic_id", id)
-      .eq("date", dateStr)
-
-    if (error) console.error(error)
-    else {
-      const booked = data.map((r: any) => r.time)
-      setBookedTimes(booked)
+    if (error) {
+      console.error("Error cargando reservas:", error.message)
+      toast({
+        title: "❌ Error al cargar reservas",
+        description: error.message,
+        variant: "destructive",
+      })
+    } else {
+      setReservas(data || [])
     }
+    setLoading(false)
   }
 
   useEffect(() => {
     if (id) fetchReservas()
   }, [id])
 
-  useEffect(() => {
-    if (selectedDate) fetchBookedTimes()
-  }, [selectedDate])
-
-  // 🧩 Crear sesión de pago en Stripe
-  const handleReserve = async () => {
-    if (!selectedDate || !selectedTime) return
-    setLoading(true)
-
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clinicId: id,
-          userName: "Paciente",
-          date: selectedDate.toISOString().split("T")[0],
-          time: selectedTime,
-        }),
-      })
-
-      const data = await res.json()
-      if (data.url) {
-        window.location.href = data.url // Redirigir al checkout de Stripe
-      } else {
-        throw new Error(data.error || "No se pudo iniciar el pago.")
-      }
-    } catch (err: any) {
-      toast({
-        title: "❌ Error al iniciar pago",
-        description: err.message,
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
+  // 🔁 Recargar reservas tras cerrar el modal (por si se creó una nueva)
+  const handleModalChange = (value: boolean) => {
+    setOpen(value)
+    if (!value) fetchReservas()
   }
 
   return (
@@ -112,7 +61,8 @@ export default function ClinicDetailPage() {
       <section className="text-center mb-10">
         <h1 className="text-4xl font-bold mb-2">Clínica {id}</h1>
         <p className="text-gray-500 dark:text-gray-400">
-          Bienvenido a la ficha de la clínica. Aquí podrás reservar y pagar tu próxima sesión de fisioterapia.
+          Bienvenido a la ficha de la clínica. Aquí podrás reservar tu próxima
+          sesión de fisioterapia con el profesional que prefieras.
         </p>
       </section>
 
@@ -121,63 +71,23 @@ export default function ClinicDetailPage() {
         <p className="text-gray-500">[Imagen o galería de la clínica]</p>
       </div>
 
-      {/* Botón de reserva */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      {/* Botón y modal de reserva */}
+      <Dialog open={open} onOpenChange={handleModalChange}>
         <DialogTrigger asChild>
           <Button size="lg" className="mx-auto block px-6 py-2 text-lg">
             Reservar sesión
           </Button>
         </DialogTrigger>
 
-        {/* Modal de reserva */}
         <DialogContent className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 max-w-lg mx-auto">
           <DialogHeader>
             <DialogTitle className="text-center text-2xl font-semibold mb-4">
-              Selecciona fecha y hora
+              Reserva tu sesión
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6">
-            {/* Selector de día */}
-            <div>
-              <Label>Selecciona un día</Label>
-              <DayPicker
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                fromDate={new Date()}
-                className="mt-2 border rounded-lg p-2"
-              />
-            </div>
-
-            {/* Selector de hora */}
-            {selectedDate && (
-              <div>
-                <Label>Selecciona hora</Label>
-                <div className="grid grid-cols-3 gap-2 mt-3">
-                  {timeSlots.map((t) => (
-                    <Button
-                      key={t}
-                      variant={t === selectedTime ? "default" : "outline"}
-                      onClick={() => setSelectedTime(t)}
-                      disabled={bookedTimes.includes(t)}
-                    >
-                      {t}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Botón de reserva */}
-            <Button
-              className="w-full mt-4"
-              disabled={!selectedDate || !selectedTime || loading}
-              onClick={handleReserve}
-            >
-              {loading ? "Iniciando pago..." : "Confirmar y pagar"}
-            </Button>
-          </div>
+          {/* 🔽 Formulario de reserva */}
+          <ReservationForm clinicId={id as string} />
         </DialogContent>
       </Dialog>
 
@@ -187,8 +97,12 @@ export default function ClinicDetailPage() {
           Reservas confirmadas
         </h2>
 
-        {reservas.length === 0 ? (
-          <p className="text-gray-500 text-center">Todavía no hay reservas.</p>
+        {loading ? (
+          <p className="text-center text-gray-500">Cargando reservas...</p>
+        ) : reservas.length === 0 ? (
+          <p className="text-center text-gray-500">
+            Todavía no hay reservas registradas.
+          </p>
         ) : (
           <div className="overflow-hidden border rounded-xl dark:border-gray-800">
             <table className="w-full text-left">
@@ -197,6 +111,7 @@ export default function ClinicDetailPage() {
                   <th className="p-3">Nombre</th>
                   <th className="p-3">Fecha</th>
                   <th className="p-3">Hora</th>
+                  <th className="p-3">Estado</th>
                 </tr>
               </thead>
               <tbody>
@@ -205,11 +120,24 @@ export default function ClinicDetailPage() {
                     key={r.id}
                     className="border-t border-gray-200 dark:border-gray-700"
                   >
-                    <td className="p-3">{r.user_name}</td>
+                    <td className="p-3">{r.user_name || "Paciente"}</td>
                     <td className="p-3">
                       {new Date(r.date).toLocaleDateString("es-ES")}
                     </td>
                     <td className="p-3">{r.time}</td>
+                    <td className="p-3">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${
+                          r.status === "aceptada"
+                            ? "bg-green-200 text-green-800"
+                            : r.status === "cancelada"
+                            ? "bg-red-200 text-red-800"
+                            : "bg-yellow-200 text-yellow-800"
+                        }`}
+                      >
+                        {r.status || "pendiente"}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
