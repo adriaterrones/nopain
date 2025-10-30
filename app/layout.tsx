@@ -11,7 +11,7 @@ import {
 import { Poppins } from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
 import { createClient } from "@/utils/supabase/server"
-import { LogoutButton } from "@/components/LogoutButton"
+import LogoutButton from "@/components/LogoutButton" // ✅ CORREGIDO
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -28,10 +28,10 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  // ✅ CORREGIDO: ahora esperamos al cliente de Supabase
+  // ✅ Esperamos al cliente de Supabase (versión server)
   const supabase = await createClient()
 
-  // ✅ Obtenemos el usuario correctamente
+  // ✅ Obtenemos usuario autenticado (lado servidor)
   const {
     data: { user },
   } = await supabase.auth.getUser()
@@ -93,7 +93,7 @@ export default async function RootLayout({
                   {/* Login o logout según estado */}
                   <NavigationMenuItem>
                     {user ? (
-                      <LogoutButton />
+                      <LogoutButton /> // ✅ Botón funcional
                     ) : (
                       <NavigationMenuLink asChild>
                         <Link

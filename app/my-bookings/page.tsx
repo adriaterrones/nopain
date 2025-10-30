@@ -6,33 +6,47 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { motion, AnimatePresence } from "framer-motion"
+import { useRouter } from "next/navigation"
 
 export default function MyBookingsPage() {
   const supabase = createClient()
   const { toast } = useToast()
+  const router = useRouter()
 
   const [bookings, setBookings] = useState<any[]>([])
   const [clinics, setClinics] = useState<any[]>([])
   const [physios, setPhysios] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [patientName, setPatientName] = useState("")
+  const [user, setUser] = useState<any>(null)
 
-  // 🔹 Usuario temporal
+  // 🧠 Obtener usuario autenticado
   useEffect(() => {
-    setPatientName("Marc")
-  }, [])
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) {
+        router.push("/login")
+      } else {
+        setUser(user)
+      }
+    }
+    fetchUser()
+  }, [router, supabase])
 
-  // 🔹 Cargar datos
+  // 🔹 Cargar datos del usuario autenticado
   useEffect(() => {
     const fetchAll = async () => {
-      if (!patientName) return
+      if (!user) return
 
       try {
-        // 1️⃣ Reservas del paciente
+        // 1️⃣ Reservas del usuario logueado
         const { data: reservas, error: reservasError } = await supabase
           .from("reservas")
-          .select("id, date, time, starts_at, ends_at, status, clinic_id, physio_id, patient_name")
-          .eq("patient_name", patientName)
+          .select(
+            "id, date, time, ends_at, status, clinic_id, physio_id, user_name"
+          )
+          .eq("user_id", user.id)
           .order("date", { ascending: true })
 
         if (reservasError) throw reservasError
@@ -64,6 +78,7 @@ export default function MyBookingsPage() {
         toast({
           title: "Error",
           description: "No se pudieron cargar tus reservas.",
+          variant: "destructive",
         })
       } finally {
         setLoading(false)
@@ -71,7 +86,7 @@ export default function MyBookingsPage() {
     }
 
     fetchAll()
-  }, [patientName])
+  }, [user])
 
   // 🔹 Cancelar reserva
   const handleCancel = async (id: string) => {
@@ -180,13 +195,13 @@ export default function MyBookingsPage() {
                     {new Date(b.date).toLocaleDateString("es-ES")}
                   </p>
                   <p>
-                    <strong>Hora:</strong> {b.time} —{" "}
+                    <strong>Hora:</strong> {b.time}{" "}
                     {b.ends_at
-                      ? new Date(b.ends_at).toLocaleTimeString("es-ES", {
+                      ? `— ${new Date(b.ends_at).toLocaleTimeString("es-ES", {
                           hour: "2-digit",
                           minute: "2-digit",
-                        })
-                      : "?"}
+                        })}`
+                      : ""}
                   </p>
 
                   {(b.status === "pending" || b.status === "confirmed") && (

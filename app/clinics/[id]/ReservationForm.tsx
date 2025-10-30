@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog"
 import { DayPicker } from "react-day-picker"
 import "react-day-picker/dist/style.css"
+import { useToast } from "@/components/ui/use-toast"
 
 type Physio = {
   id: string
@@ -32,14 +33,42 @@ export default function ReservationForm() {
   const params = useParams()
   const clinicId = Array.isArray(params.id) ? params.id[0] : params.id
   const supabase = createClient()
+  const { toast } = useToast()
 
   const [open, setOpen] = useState(false)
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
   const [selectedDate, setSelectedDate] = useState<Date | undefined>()
   const [time, setTime] = useState("")
   const [physios, setPhysios] = useState<Physio[]>([])
   const [selectedPhysio, setSelectedPhysio] = useState<string>("")
+  const [loading, setLoading] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [userName, setUserName] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  // 🧠 Obtener usuario autenticado al cargar (corregido)
+  useEffect(() => {
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (user) {
+        setUserEmail(user.email ?? null)
+        setUserId(user.id)
+
+        const fallbackName =
+          user.user_metadata?.full_name ??
+          (user.email ? user.email.split("@")[0] : "Usuario NoPain")
+
+        setUserName(fallbackName)
+      } else {
+        setUserEmail(null)
+        setUserId(null)
+        setUserName(null)
+      }
+    }
+    fetchUser()
+  }, [])
 
   // 🩺 Cargar fisioterapeutas de la clínica
   useEffect(() => {
@@ -62,35 +91,60 @@ export default function ReservationForm() {
     fetchPhysios()
   }, [clinicId])
 
-  // 💾 Crear reserva
+  // 💾 Crear reserva vinculada al usuario autenticado
   const handleReservation = async () => {
-    if (!name || !email || !selectedDate || !time || !selectedPhysio) {
-      window.alert("Por favor, completa todos los campos.")
+    if (!selectedDate || !time || !selectedPhysio) {
+      toast({
+        title: "Campos incompletos",
+        description: "Selecciona fisioterapeuta, fecha y hora.",
+        variant: "destructive",
+      })
       return
     }
 
-    const { error } = await supabase.from("reservas").insert([
-      {
-        user_name: name,
-        user_email: email,
-        clinic_id: clinicId,
-        date: selectedDate.toISOString(),
-        time,
-        physio_id: selectedPhysio,
-      },
-    ])
+    if (!userId || !userEmail) {
+      toast({
+        title: "Inicia sesión para reservar",
+        description: "Debes iniciar sesión antes de hacer una reserva.",
+        variant: "destructive",
+      })
+      return
+    }
 
-    if (error) {
-      console.error("❌ Error al crear la reserva:", error)
-      window.alert("No se ha podido crear la reserva.")
-    } else {
-      window.alert("✅ Reserva creada correctamente.")
+    try {
+      setLoading(true)
+      const { error } = await supabase.from("reservas").insert([
+        {
+          user_id: userId,
+          user_email: userEmail,
+          user_name: userName,
+          clinic_id: clinicId,
+          date: selectedDate.toISOString(),
+          time,
+          physio_id: selectedPhysio,
+        },
+      ])
+
+      if (error) throw error
+
+      toast({
+        title: "✅ Reserva creada correctamente",
+        description: "Tu cita se ha guardado en tu panel de reservas.",
+      })
+
       setOpen(false)
-      setName("")
-      setEmail("")
       setSelectedDate(undefined)
       setTime("")
       setSelectedPhysio("")
+    } catch (err: any) {
+      toast({
+        title: "❌ Error al crear la reserva",
+        description: err.message,
+        variant: "destructive",
+      })
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -106,25 +160,16 @@ export default function ReservationForm() {
         </DialogHeader>
 
         <div className="space-y-4 py-2 max-h-[80vh] overflow-y-auto">
-          {/* Nombre */}
-          <div>
-            <Label>Tu nombre</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Tu nombre"
-            />
-          </div>
-
-          {/* Correo */}
-          <div>
-            <Label>Tu correo electrónico</Label>
-            <Input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
-            />
-          </div>
+          {/* Info del usuario autenticado */}
+          {userEmail ? (
+            <div className="text-sm text-muted-foreground">
+              Reservando como <span className="font-medium">{userEmail}</span>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              Inicia sesión para hacer una reserva.
+            </div>
+          )}
 
           {/* Selector de fisioterapeuta */}
           <div>
@@ -172,8 +217,12 @@ export default function ReservationForm() {
           </div>
 
           {/* Botón de confirmación */}
-          <Button className="w-full mt-2" onClick={handleReservation}>
-            Confirmar reserva
+          <Button
+            className="w-full mt-2"
+            onClick={handleReservation}
+            disabled={loading}
+          >
+            {loading ? "Guardando..." : "Confirmar reserva"}
           </Button>
         </div>
       </DialogContent>
