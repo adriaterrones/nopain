@@ -28,8 +28,10 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  // 🧩 Detectar usuario y rol actual desde Supabase (en el servidor)
-  const supabase = createClient()
+  // ✅ CORREGIDO: ahora esperamos al cliente de Supabase
+  const supabase = await createClient()
+
+  // ✅ Obtenemos el usuario correctamente
   const {
     data: { user },
   } = await supabase.auth.getUser()
