@@ -4,178 +4,171 @@ import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { useToast } from "@/components/ui/use-toast"
 import { DayPicker } from "react-day-picker"
 import "react-day-picker/dist/style.css"
-import ReservationForm from "./ReservationForm" // ✅ nuevo formulario
-import { useToast } from "@/components/ui/use-toast"
 
-type Reserva = {
-  id: string
-  created_at: string
-  user_name: string
-  date: string
-  clinic_id: string
-  user_email: string | null
-  user_id: string | null
-  time: string
-  physio_id?: string | null
-}
-
-export default function ClinicDetailPage() {
-  const { id } = useParams() as { id: string }
+export default function ClinicPage() {
   const supabase = createClient()
+  const { id } = useParams()
   const { toast } = useToast()
 
-  const [reservas, setReservas] = useState<Reserva[]>([])
+  const [clinic, setClinic] = useState<any>(null)
+  const [physiotherapists, setPhysiotherapists] = useState<any[]>([])
+  const [selectedPhysio, setSelectedPhysio] = useState<string>("")
   const [selectedDate, setSelectedDate] = useState<Date | undefined>()
-  const [bookedTimes, setBookedTimes] = useState<string[]>([])
-  const [selectedTime, setSelectedTime] = useState<string>("")
-  const [loading, setLoading] = useState(false)
+  const [userName, setUserName] = useState("")
+  const [time, setTime] = useState("")
 
-  // 🕒 Horarios posibles
-  const timeSlots = [
-    "09:00", "09:30", "10:00", "10:30",
-    "11:00", "11:30", "12:00", "12:30",
-    "16:00", "16:30", "17:00", "17:30",
-  ]
-
-  // 📦 Cargar reservas de la clínica
-  const fetchReservas = async () => {
-    const { data, error } = await supabase
-      .from("reservas")
-      .select("*")
-      .eq("clinic_id", id)
-      .order("date", { ascending: true })
-      .order("time", { ascending: true })
-
-    if (error) {
-      console.error("Error cargando reservas:", error)
-      setReservas([])
-    } else {
-      setReservas((data ?? []) as Reserva[])
-    }
-  }
-
-  // 🔒 Cargar horas bloqueadas
-  const fetchBookedTimes = async () => {
-    if (!selectedDate) return
-    const dateStr = selectedDate.toISOString().split("T")[0]
-    const { data, error } = await supabase
-      .from("reservas")
-      .select("time")
-      .eq("clinic_id", id)
-      .eq("date", dateStr)
-
-    if (error) {
-      console.error("Error cargando horas:", error)
-      setBookedTimes([])
-    } else {
-      setBookedTimes((data ?? []).map((r: { time: string }) => r.time))
-    }
-  }
-
+  // 🔹 Cargar datos de la clínica
   useEffect(() => {
-    if (id) fetchReservas()
+    const fetchClinic = async () => {
+      const { data, error } = await supabase
+        .from("clinics")
+        .select("*")
+        .eq("id", id)
+        .single()
+
+      if (error) console.error(error)
+      else setClinic(data)
+    }
+    fetchClinic()
   }, [id])
 
+  // 🔹 Cargar fisioterapeutas asociados
   useEffect(() => {
-    if (selectedDate) fetchBookedTimes()
-  }, [selectedDate])
+    const fetchPhysiotherapists = async () => {
+      const { data, error } = await supabase
+        .from("physiotherapists")
+        .select("*")
+        .eq("clinic_id", id)
 
-  // 💾 Guardar reserva (temporal: demo manual)
-  const handleReserve = async () => {
-    if (!selectedDate || !selectedTime) {
-      toast({
-        title: "Selecciona fecha y hora",
-        description: "Por favor, elige un día y una hora disponibles.",
-        variant: "destructive",
-      })
+      if (error) console.error(error)
+      else setPhysiotherapists(data)
+    }
+    fetchPhysiotherapists()
+  }, [id])
+
+  // 🔹 Crear reserva
+  const handleReservation = async () => {
+    if (!selectedPhysio || !selectedDate || !userName || !time) {
+      toast({ title: "Faltan datos", description: "Completa todos los campos." })
       return
     }
 
-    setLoading(true)
-    const dateStr = selectedDate.toISOString().split("T")[0]
-
     const { error } = await supabase.from("reservas").insert([
       {
+        user_name: userName,
         clinic_id: id,
-        user_name: "Paciente de prueba",
-        date: dateStr,
-        time: selectedTime,
+        date: selectedDate.toISOString(),
+        time,
+        physio_id: selectedPhysio,
       },
     ])
 
     if (error) {
-      console.error("Error al guardar reserva:", error)
+      console.error(error)
       toast({
-        title: "Error al guardar",
-        description: "No se pudo guardar la reserva.",
-        variant: "destructive",
+        title: "Error al reservar",
+        description: "No se pudo crear la reserva.",
       })
     } else {
       toast({
         title: "Reserva confirmada",
-        description: `Reserva creada para el ${dateStr} a las ${selectedTime}.`,
+        description: "Tu reserva se ha creado correctamente.",
       })
-      await fetchReservas()
-      await fetchBookedTimes()
+      setUserName("")
+      setSelectedPhysio("")
       setSelectedDate(undefined)
-      setSelectedTime("")
+      setTime("")
     }
-
-    setLoading(false)
   }
 
+  if (!clinic) return <p className="text-center mt-10">Cargando clínica...</p>
+
   return (
-    <div className="max-w-5xl mx-auto p-8">
-      {/* Cabecera */}
-      <section className="text-center mb-10">
-        <h1 className="text-4xl font-bold mb-2">Clínica {id}</h1>
-        <p className="text-gray-500 dark:text-gray-400">
-          Bienvenido a la ficha de la clínica. Aquí podrás reservar tu próxima sesión de fisioterapia.
-        </p>
-      </section>
+    <div className="max-w-3xl mx-auto p-4">
+      <Card className="mb-6 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl font-semibold">{clinic.name}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">{clinic.description}</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            📍 {clinic.address}
+          </p>
+        </CardContent>
+      </Card>
 
-      {/* Imagen o galería */}
-      <div className="w-full h-72 bg-gray-200 dark:bg-gray-800 rounded-2xl mb-12 flex items-center justify-center">
-        <p className="text-gray-500">[Imagen o galería de la clínica]</p>
-      </div>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button className="w-full">Reservar cita</Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reservar en {clinic.name}</DialogTitle>
+          </DialogHeader>
 
-      {/* 🔹 NUEVO FORMULARIO DE RESERVA */}
-      <ReservationForm />
+          <div className="space-y-4">
+            <div>
+              <Label>Nombre</Label>
+              <Input
+                placeholder="Tu nombre"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+              />
+            </div>
 
-      {/* Horas disponibles (demo visual) */}
-      <section className="mt-16">
-        <h2 className="text-2xl font-semibold mb-4 text-center">Reservas confirmadas</h2>
-
-        {reservas.length === 0 ? (
-          <p className="text-gray-500 text-center">Todavía no hay reservas.</p>
-        ) : (
-          <div className="overflow-hidden border rounded-xl dark:border-gray-800">
-            <table className="w-full text-left">
-              <thead className="bg-gray-100 dark:bg-gray-800">
-                <tr>
-                  <th className="p-3">Nombre</th>
-                  <th className="p-3">Fecha</th>
-                  <th className="p-3">Hora</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reservas.map((r) => (
-                  <tr key={r.id} className="border-t border-gray-200 dark:border-gray-700">
-                    <td className="p-3">{r.user_name}</td>
-                    <td className="p-3">
-                      {new Date(r.date).toLocaleDateString("es-ES")}
-                    </td>
-                    <td className="p-3">{r.time}</td>
-                  </tr>
+            <div>
+              <Label>Fisioterapeuta</Label>
+              <select
+                className="w-full border rounded p-2"
+                value={selectedPhysio}
+                onChange={(e) => setSelectedPhysio(e.target.value)}
+              >
+                <option value="">Selecciona un fisioterapeuta</option>
+                {physiotherapists.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
                 ))}
-              </tbody>
-            </table>
+              </select>
+            </div>
+
+            <div>
+              <Label>Fecha</Label>
+              <DayPicker
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+              />
+            </div>
+
+            <div>
+              <Label>Hora</Label>
+              <Input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+              />
+            </div>
+
+            <Button onClick={handleReservation} className="w-full">
+              Confirmar reserva
+            </Button>
           </div>
-        )}
-      </section>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
