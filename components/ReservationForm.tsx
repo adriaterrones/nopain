@@ -3,117 +3,141 @@
 import { useState, useEffect } from "react"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useToast } from "@/components/ui/use-toast"
-import { DayPicker } from "react-day-picker"
-import "react-day-picker/dist/style.css"
+import { toast } from "sonner" // ✅ Nuevo sistema de notificaciones Sonner
 
-export default function ReservationForm({ clinicId }: { clinicId: string }) {
+type Physiotherapist = {
+  id: string
+  name: string
+  specialty: string | null
+}
+
+export default function ReservationForm({
+  clinicId,
+  onSuccess,
+}: {
+  clinicId: string
+  onSuccess?: () => void
+}) {
   const supabase = createClient()
-  const { toast } = useToast()
-
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>()
-  const [selectedTime, setSelectedTime] = useState<string>("")
-  const [availableTimes, setAvailableTimes] = useState<string[]>([])
-  const [bookedTimes, setBookedTimes] = useState<string[]>([])
+  const [physiotherapists, setPhysiotherapists] = useState<Physiotherapist[]>([])
+  const [selectedPhysio, setSelectedPhysio] = useState<string>("")
+  const [patientName, setPatientName] = useState("")
+  const [date, setDate] = useState("")
+  const [time, setTime] = useState("")
   const [loading, setLoading] = useState(false)
 
-  // Franjas fijas de ejemplo (se podrán ajustar por clínica)
-  const timeSlots = [
-    "09:00", "09:30", "10:00", "10:30",
-    "11:00", "11:30", "12:00", "12:30",
-    "16:00", "16:30", "17:00", "17:30",
-  ]
-
+  // 🔹 Cargar fisioterapeutas según la clínica
   useEffect(() => {
-    if (selectedDate) fetchBookedTimes()
-  }, [selectedDate])
+    const fetchPhysios = async () => {
+      const { data, error } = await supabase
+        .from("physiotherapists")
+        .select("id, name, specialty")
+        .eq("clinic_id", clinicId)
 
-  async function fetchBookedTimes() {
-    const dayStr = selectedDate?.toISOString().split("T")[0]
-    const { data, error } = await supabase
-      .from("reservas")
-      .select("time")
-      .eq("clinic_id", clinicId)
-      .eq("date", dayStr)
-
-    if (error) console.error(error)
-    else {
-      const booked = data.map((r: any) => r.time)
-      setBookedTimes(booked)
-      setAvailableTimes(timeSlots.filter((t) => !booked.includes(t)))
+      if (error) toast.error("Error al cargar fisioterapeutas.")
+      else setPhysiotherapists(data)
     }
-  }
 
-  async function handleReserve() {
-    if (!selectedDate || !selectedTime) return
+    if (clinicId) fetchPhysios()
+  }, [clinicId, supabase])
+
+  // 🔹 Enviar reserva
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!selectedPhysio || !patientName || !date || !time) {
+      toast.error("Completa todos los campos antes de continuar.")
+      return
+    }
+
     setLoading(true)
 
     const { error } = await supabase.from("reservas").insert([
       {
         clinic_id: clinicId,
-        user_name: "Paciente",
-        date: selectedDate.toISOString().split("T")[0],
-        time: selectedTime,
+        physio_id: selectedPhysio,
+        patient_name: patientName,
+        date,
+        time,
       },
     ])
 
     setLoading(false)
 
     if (error) {
-      toast({
-        title: "❌ Error",
-        description: error.message,
-        variant: "destructive",
-      })
+      toast.error(`Error al crear la reserva: ${error.message}`)
     } else {
-      toast({
-        title: "✅ Reserva confirmada",
-        description: `${selectedDate.toLocaleDateString()} — ${selectedTime}`,
-      })
-      setSelectedDate(undefined)
-      setSelectedTime("")
-      fetchBookedTimes()
+      toast.success("Reserva creada correctamente 🎉")
+      setPatientName("")
+      setDate("")
+      setTime("")
+      setSelectedPhysio("")
+      if (onSuccess) onSuccess()
     }
   }
 
   return (
-    <div className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label>Selecciona un día</Label>
-        <DayPicker
-          mode="single"
-          selected={selectedDate}
-          onSelect={setSelectedDate}
-          fromDate={new Date()}
+        <Label>Nombre del paciente</Label>
+        <Input
+          value={patientName}
+          onChange={(e) => setPatientName(e.target.value)}
+          placeholder="Introduce tu nombre"
+          required
         />
       </div>
 
-      {selectedDate && (
-        <div>
-          <Label>Selecciona hora</Label>
-          <div className="grid grid-cols-3 gap-2 mt-3">
-            {timeSlots.map((t) => (
-              <Button
-                key={t}
-                variant={t === selectedTime ? "default" : "outline"}
-                onClick={() => setSelectedTime(t)}
-                disabled={bookedTimes.includes(t)}
-              >
-                {t}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
+      <div>
+        <Label>Fisioterapeuta</Label>
+        <select
+          value={selectedPhysio}
+          onChange={(e) => setSelectedPhysio(e.target.value)}
+          className="w-full border rounded-md p-2 bg-background"
+          required
+        >
+          <option value="">Selecciona un fisioterapeuta</option>
+          {physiotherapists.length > 0 ? (
+            physiotherapists.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} {p.specialty ? `(${p.specialty})` : ""}
+              </option>
+            ))
+          ) : (
+            <option disabled value="">
+              No hay fisioterapeutas disponibles
+            </option>
+          )}
+        </select>
+      </div>
 
-      <Button
-        className="w-full mt-4"
-        disabled={!selectedDate || !selectedTime || loading}
-        onClick={handleReserve}
-      >
-        {loading ? "Reservando..." : "Confirmar reserva"}
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <Label>Fecha</Label>
+          <Input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            required
+          />
+        </div>
+
+        <div className="flex-1">
+          <Label>Hora</Label>
+          <Input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            required
+          />
+        </div>
+      </div>
+
+      <Button type="submit" disabled={loading} className="w-full">
+        {loading ? "Guardando..." : "Reservar sesión"}
       </Button>
-    </div>
+    </form>
   )
 }

@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    /* =============================
+       ⚙️ CONFIGURACIÓN BASE
+    ============================== */
+    "target": "esnext",
     "lib": [
       "dom",
       "dom.iterable",
@@ -9,6 +12,7 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
+    "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
@@ -17,27 +21,38 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    /* =============================
+       🧩 COMPATIBILIDAD CON NEXT.JS
+    ============================== */
     "plugins": [
       {
         "name": "next"
       }
     ],
+    /* =============================
+       🪄 ALIAS DE IMPORTACIÓN "@"
+    ============================== */
+    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
       ]
     }
   },
+  /* =============================
+     📁 INCLUSIÓN DE TIPOS Y RUTAS
+  ============================== */
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts",
     ".next\\dev/types/**/*.ts",
     ".next\\dev/types/**/*.ts"
   ],
+  /* =============================
+     🚫 EXCLUSIÓN DE CARPETAS
+  ============================== */
   "exclude": [
     "node_modules"
   ]

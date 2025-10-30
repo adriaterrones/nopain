@@ -1,8 +1,5 @@
-[00:00:03.343] Server  WARN     ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
-[00:00:03.690] Server  LOG      ✓ Ready in 3s
-[00:01:29.079] Server  LOG      ○ Compiling /login ...
-[00:01:32.979] Server  WARN    Error: Route "/login" used `cookies().get`. `cookies()` returns a Promise and must be unwrapped with `await` or `React.use()` before accessing its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
-[00:01:33.979] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[02:17:49.069] Server  LOG        Reload env: .env.local
-[02:21:08.908] Server  LOG        Reload env: .env.local
-[02:21:09.983] Server  LOG      ✓ Compiled in 921ms
+[00:00:08.791] Server  WARN     ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+[00:00:09.707] Server  LOG      ✓ Ready in 8.5s
+[00:00:15.016] Server  LOG      ○ Compiling /clinic-panel ...
+[00:00:31.515] Server  WARN    Error: Route "/clinic-panel" used `cookies().get`. `cookies()` returns a Promise and must be unwrapped with `await` or `React.use()` before accessing its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+[00:00:33.003] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold

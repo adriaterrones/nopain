@@ -9,9 +9,9 @@ import {
   NavigationMenuLink,
 } from "@/components/ui/navigation-menu"
 import { Poppins } from "next/font/google"
-import { Toaster } from "@/components/ui/toaster"
 import { createClient } from "@/utils/supabase/server"
 import { LogoutButton } from "@/components/LogoutButton"
+import { Toaster } from "@/components/ui/sonner" // ✅ Nuevo sistema Sonner
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -118,8 +118,8 @@ export default async function RootLayout({
             © {new Date().getFullYear()} NoPain — Todos los derechos reservados.
           </footer>
 
-          {/* TOASTER */}
-          <Toaster />
+          {/* ✅ NUEVO TOASTER (Sonner) */}
+          <Toaster position="top-right" richColors />
         </ThemeProvider>
       </body>
     </html>
