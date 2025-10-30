@@ -291,3 +291,7 @@ html, body {
 .nextjs-toast {
   display: none !important;
 }
+/* Evita que el contenido se desplace o se duplique cuando se abre un modal */
+[data-state="open"] body {
+  overflow: hidden;
+}
